@@ -29,11 +29,13 @@ punct [();,\[\]]
 
 int32		{
 			store_token_name ("TK_INT32", yytext, yylineno);
+                        yylval.name= new string(yytext);
 			return TK_INT32;
 		}
 
 int8		{
 			store_token_name ("TK_INT8", yytext, yylineno);
+                        yylval.name= new string(yytext);
 			return TK_INT8;
 		}
 

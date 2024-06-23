@@ -106,10 +106,11 @@ string Type_Info::base_type_name()
 	{
 		return "INT32";
 	}
-	else if (this->base_type == FLOAT32)
+	else if (this->base_type == INT8)
 	{
-		return "FLOAT32";
+		return "INT8";
 	}
+        return "Invalid base type name from Type_Info";
 }
 var_type Type_Info::get_base_type()
 {
@@ -126,4 +127,43 @@ int Type_Info::get_size_of_first_dim()
 int Type_Info::get_size_of_second_dim()
 {
 	return this->second_dim_size;
+}
+
+var_type get_base_type_from_string(string * name)
+{
+   if (*name == "int8") return INT8;
+   else if (*name == "int32") return INT32;
+   else {
+     cout<< "Error";
+     return INT8;
+   }
+}
+
+bool found_in_symbol_table(string name)
+{
+    return (symtab.find(name) != symtab.end());
+}
+
+void add_symbol_table_entry(string * name, Type_Info * t)
+{
+    if (found_in_symbol_table(*name)) {
+        cout<< "\nFound " << *name << " in Symbol Table: Discard\n";
+        return;
+    }
+    cout<< "\nEntering new data " << *name << " to Symbol Table";
+    symtab.insert({*name, t});
+}
+
+void show_symbol_table()
+{
+    cout << "\nSymbol Table View\n";
+    for (auto x : symtab) {
+        cout << x.first << " " << (x.second)->base_type_name() << endl;
+    }
+}
+
+int get_int_from_string (string * name)
+{
+    int num = stoi(*name);
+    return num;
 }

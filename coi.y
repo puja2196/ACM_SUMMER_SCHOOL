@@ -12,6 +12,7 @@ void display_stmt_list (list<Ast *> *);
 	Ast *ast;
 	list<Ast *> *ast_list;	
 }
+
 %token <name> NUM 
 %token <name> ID
 %token TK_INT8
@@ -23,6 +24,7 @@ void display_stmt_list (list<Ast *> *);
 %type <ast> Expr
 %type <ast> Stmt
 %type <ast_list> StmtList
+%type <name> Base_Type
 %start Start
 %%
 Start: StmtList 			{	if (show_parse()) cout << "Reducing by `Start: StmtList'\n";
@@ -42,10 +44,11 @@ Stmt : ID '=' Expr ';' 			{
 						if (show_parse()) cout << "Reducing by `Stmt : ID = Expr ;'\n";
 						if (semantic_analysis()) $$ = process_Asgn($1, $3); 
 					}
-	| Decl_Stmt ';'			{
-						$$ = new Empty_Ast(); 
+	| Decl_Stmt			{
+						$$ = new Empty_Ast();
+                                                if (show_symtab()) show_symbol_table();
 					}
-	;
+
 Expr : Expr '+' Expr			{ 
 						if (show_parse()) cout << "Reducing by `Expr : Expr + Expr'\n";
 						if (semantic_analysis()) $$ = process_Expr($1, PLUS, $3); 
@@ -82,12 +85,33 @@ Expr : Expr '+' Expr			{
 
 Decl_Stmt: Scalar_Decl_Stmt | Tensor_Decl_Stmt
 
-Tensor_Decl_Stmt : ID'('NUM','Base_Type')''['NUM']'| ID'('NUM','Base_Type')''['NUM']''['NUM']'
+Tensor_Decl_Stmt : ID '(' NUM ',' Base_Type ')' '[' NUM ']' ';'  {
+                                                                  var_type bt = get_base_type_from_string($5);
+                                                                  int dim = get_int_from_string($3);
+                                                                  int x = get_int_from_string($8);
+                                                                  Type_Info * t = new Type_Info(bt, dim, x, 0);
+                                                                  add_symbol_table_entry($1, t);
+                                                                 }
+                 | ID '(' NUM ',' Base_Type ')' '[' NUM ']' '[' NUM ']' ';'  {
+                                                                  var_type bt = get_base_type_from_string($5);
+                                                                  int dim = get_int_from_string($3);
+                                                                  int x = get_int_from_string($8);
+                                                                  int y = get_int_from_string($11);
+                                                                  Type_Info * t = new Type_Info(bt, dim, x, y);
+                                                                  add_symbol_table_entry($1, t);
+                                                                 }
+                 ;
 
-Scalar_Decl_Stmt: Base_Type ID
+Scalar_Decl_Stmt: Base_Type ID ';' {
+                                   var_type bt = get_base_type_from_string($1);
+				   Type_Info * t = new Type_Info(bt);
+                                   add_symbol_table_entry($2, t);
+                                   }
+                ;
 
 Base_Type: TK_INT32
 	 | TK_INT8
+         ;
 	
 %%
 
