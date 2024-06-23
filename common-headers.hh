@@ -87,7 +87,7 @@ bool semantic_analysis();
 // For Symbol table:
 var_type get_base_type_from_string(string * name);
 void add_symbol_table_entry(string * name, Type_Info * t);
-bool found_in_symbol_table(string name);
+bool found_in_symbol_table(string * name);
 void show_symbol_table();
 int get_int_from_string (string * name);
 

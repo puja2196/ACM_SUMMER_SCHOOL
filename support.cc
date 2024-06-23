@@ -139,15 +139,15 @@ var_type get_base_type_from_string(string * name)
    }
 }
 
-bool found_in_symbol_table(string name)
+bool found_in_symbol_table(string * name)
 {
-    return (symtab.find(name) != symtab.end());
+    return (symtab.find(*name) != symtab.end());
 }
 
 void add_symbol_table_entry(string * name, Type_Info * t)
 {
-    if (found_in_symbol_table(*name)) {
-        cout<< "\nFound " << *name << " in Symbol Table: Discard\n";
+    if (found_in_symbol_table(name)) {
+        cout<< "\nError: Found " << *name << " in Symbol Table: Discard\n";
         return;
     }
     cout<< "\nEntering new data " << *name << " to Symbol Table";

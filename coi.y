@@ -42,7 +42,10 @@ StmtList : StmtList Stmt		{
 
 Stmt : ID '=' Expr ';' 			{ 
 						if (show_parse()) cout << "Reducing by `Stmt : ID = Expr ;'\n";
-						if (semantic_analysis()) $$ = process_Asgn($1, $3); 
+                                                if (!found_in_symbol_table($1)) {
+                                                    cout << "\nError: symbol " << *($1) << " is not declared and not found in symbol table, can't be assigned\n";
+                                                }
+						else if (semantic_analysis()) $$ = process_Asgn($1, $3);
 					}
 	| Decl_Stmt			{
 						$$ = new Empty_Ast();
@@ -75,7 +78,10 @@ Expr : Expr '+' Expr			{
 					}
 	| ID 				{ 
 						if (show_parse()) cout << "Reducing by `Expr : ID'\n";
-						if (semantic_analysis()) $$ = process_ID($1); 
+                                                if (!found_in_symbol_table($1)) {
+                                                    cout << "\nError: symbol " << *($1) << " is not declared and not found in symbol table, can't be used\n";
+                                                }
+						else if (semantic_analysis()) $$ = process_ID($1); 
 					}
 	| '(' Expr ')'			{ 
 						if (show_parse()) cout << "Reducing by `Expr : ( Expr )'\n";
