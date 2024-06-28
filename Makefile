@@ -7,7 +7,7 @@ TGT = coi
 SCAN = $(TGT).l
 PARSE = $(TGT).y
 
-OBJ = scan.o parse.tab.o main.o support.o ast.o options.o
+OBJ = scan.o parse.tab.o main.o support.o ast.o options.o type-check.o codegen.o
 
 CFLAGS = -g -fpermissive -I/opt/homebrew/Cellar/argp-standalone/1.3/include/
 LDFLAGS = -L/opt/homebrew/Cellar/argp-standalone/1.3/lib -L/opt/homebrew/opt/flex/lib -lfl -ly -largp

@@ -1,4 +1,0 @@
-int32 r;
-int32 a;
-int32 x;
-r = a*x + 10;

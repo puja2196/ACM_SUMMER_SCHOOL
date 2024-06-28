@@ -9,7 +9,9 @@ using namespace std;
 #include "ast.hh"
 
 Ast::Ast()
-{}
+{
+	type_info = NULL;
+}
 
 Ast::~Ast()
 {}
@@ -36,6 +38,19 @@ void Unary_Expr_Ast::set_opd(Ast *o)
 	opd = o;
 }
 
+void Output_Expr_Ast::gencode(ofstream& genf)
+{
+	Ast *opd = get_opd();
+	assert (opd);
+	Type_Info *type_info = opd->get_type_info ();
+	assert (type_info);
+
+	if (!type_info->is_tensor_type())
+	{
+		genf << "cout << ";
+		opd->gencode(genf);
+	}
+}
 
 ////////////////////////////////////////////////////////////////
 
@@ -74,6 +89,19 @@ void Binary_Expr_Ast::set_right_child(Ast *r)
 
 	assert (r !=NULL && "The right child of a binary AST cannot be NULL");
 	right_child = r;
+}
+
+void Assignment_Stmt_Ast::gencode(ofstream& genf)
+{
+	Ast *left = get_lhs();
+	assert (left);
+	left->gencode(genf);
+
+	genf << " = ";
+
+	Ast *right = get_rhs();
+	assert (right);
+	right->gencode(genf);
 }
 
 ////////////////////////////////////////////////////////////////
@@ -155,6 +183,9 @@ template <class DATA_TYPE>
 Number_Expr_Ast<DATA_TYPE>::Number_Expr_Ast(DATA_TYPE number)
 {
 	constant = number;
+	Type_Info *type_info = new Type_Info(INT32);
+	assert (type_info);
+	set_type_info (type_info);
 }
 
 template <class DATA_TYPE>
@@ -172,17 +203,23 @@ void Number_Expr_Ast<DATA_TYPE>::print_ast(int sc, ostream & file_buffer, bool t
 	file_buffer << "Num : " << constant;
 }
 
+template <class DATA_TYPE>
+void Number_Expr_Ast<DATA_TYPE>::gencode(ofstream& genf)
+{
+	genf << constant;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
 
-Plus_Expr_Ast::Plus_Expr_Ast(Ast * l, Ast * r)
+Plus_Expr_Ast::Plus_Expr_Ast(Ast * l, Ast * r, Type_Info *type_info)
 {
 	assert (l !=NULL && "The left child of a PLUS AST cannot be NULL");
 	assert (r !=NULL && "The right child of a PLUS AST cannot be NULL");
 
 	set_left_child(l);
 	set_right_child(r);
+	set_type_info(type_info);
 }
 
 void Plus_Expr_Ast::print_ast(int sc, ostream & file_buffer, bool top_level)
@@ -203,13 +240,14 @@ void Plus_Expr_Ast::print_ast(int sc, ostream & file_buffer, bool top_level)
 
 /////////////////////////////////////////////////////////////////
 
-Minus_Expr_Ast::Minus_Expr_Ast(Ast * l, Ast * r)
+Minus_Expr_Ast::Minus_Expr_Ast(Ast * l, Ast * r, Type_Info *type_info)
 {
 	assert (l !=NULL && "The left child of a MINUS AST cannot be NULL");
 	assert (r !=NULL && "The right child of a MINUS AST cannot be NULL");
 
 	set_left_child(l);
 	set_right_child(r);
+	set_type_info(type_info);
 }
 
 void Minus_Expr_Ast::print_ast(int sc, ostream & file_buffer, bool top_level)
@@ -230,13 +268,14 @@ void Minus_Expr_Ast::print_ast(int sc, ostream & file_buffer, bool top_level)
 
 //////////////////////////////////////////////////////////////////
 
-Mult_Expr_Ast::Mult_Expr_Ast(Ast * l, Ast * r)
+Mult_Expr_Ast::Mult_Expr_Ast(Ast * l, Ast * r, Type_Info *type_info)
 {
 	assert (l !=NULL && "The left child of a MULT AST cannot be NULL");
 	assert (r !=NULL && "The right child of a MULT AST cannot be NULL");
 
 	set_left_child(l);
 	set_right_child(r);
+	set_type_info(type_info);
 }
 
 void Mult_Expr_Ast::print_ast(int sc, ostream & file_buffer, bool top_level)
@@ -257,13 +296,14 @@ void Mult_Expr_Ast::print_ast(int sc, ostream & file_buffer, bool top_level)
 
 ////////////////////////////////////////////////////////////////////
 
-Div_Expr_Ast::Div_Expr_Ast(Ast * l, Ast * r)
+Div_Expr_Ast::Div_Expr_Ast(Ast * l, Ast * r, Type_Info *type_info)
 {
 	assert (l !=NULL && "The left child of a DIV AST cannot be NULL");
 	assert (r !=NULL && "The right child of a DIV AST cannot be NULL");
 
 	set_left_child(l);
 	set_right_child(r);
+	set_type_info(type_info);
 }
 
 void Div_Expr_Ast::print_ast(int sc, ostream & file_buffer, bool top_level)
@@ -328,9 +368,10 @@ void Ast::print_spaces (int sc, ostream & file_buffer)
 
 /////////////////////////////////////////////////////////////////
 
-Name_Expr_Ast::Name_Expr_Ast(string & name)
+Name_Expr_Ast::Name_Expr_Ast(string & name, Type_Info *type_info)
 {
 	expr_name = name;
+	set_type_info (type_info);
 }
 
 Name_Expr_Ast::~Name_Expr_Ast()
@@ -346,6 +387,35 @@ void Name_Expr_Ast::print_ast(int sc, ostream & file_buffer, bool top_level)
 	file_buffer << "Name : " << expr_name;
 }
 
+MatMul_Expr_Ast::MatMul_Expr_Ast(Ast * l, Ast * r, Type_Info *type_info)
+{	
+	assert (l);
+	assert (r);
+	set_left_child(l);
+	set_right_child(r);
+	set_type_info(type_info);
+}
+
+void MatMul_Expr_Ast::print_ast(int sc, ostream & file_buffer, bool top_level)
+{
+        print_spaces_on_new_line (sc, file_buffer);
+	file_buffer << "Arith: MatMul";
+
+        print_spaces_on_new_line (sc+INDENT_INCR, file_buffer);
+	file_buffer << "L_Opd (";
+	get_left_child()->print_ast(sc+2*INDENT_INCR, file_buffer, false);
+	file_buffer << ")";
+
+        print_spaces_on_new_line (sc+INDENT_INCR, file_buffer);
+	file_buffer << "R_Opd (";
+	get_right_child()->print_ast(sc+2*INDENT_INCR, file_buffer, false);
+	file_buffer << ")";
+}
+
+void Name_Expr_Ast::gencode(ofstream& genf)
+{
+	genf << mangle_name(expr_name);
+}
 
 #if 0
 int main()

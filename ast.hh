@@ -9,11 +9,13 @@
 				- Number_Expr_Ast
 			- Unary_Expr_Ast
 				- UMinus_Expr_Ast
+				- Output_Expr_Ast
 			- Binary_Expr_Ast
 				- Plus_Expr_Ast
 				- Minus_Expr_Ast
 				- Div_Expr_Ast
 				- Mult_Expr_Ast
+				- Index_Expr_Ast
 		- Statement_Ast
 			- Assignment_Stmt_Ast
 
@@ -22,11 +24,13 @@
 #ifndef AST_HH
 #define AST_HH
 
-#include<string>
-#include<iostream>
-#include<iomanip>
-#include<typeinfo>
-#include<list>
+#include <string>
+#include <iostream>
+#include <iomanip>
+#include <typeinfo>
+#include <list>
+#include "type-info.hh"
+#include <cassert>
 
 #define AST_INDENT 4
 #define INDENT_INCR 2
@@ -48,15 +52,22 @@ public:
 	~Ast();
 
 	virtual void print_ast(int space_count, ostream & file_buffer, bool top_level) = 0;
+	virtual void gencode(ofstream &of) { assert(0); }
 
 	void print_spaces_on_new_line (int sc, ostream & file_buffer);
 	void print_spaces (int sc, ostream & file_buffer);
+
+	Type_Info *get_type_info () { return type_info; }
+	void set_type_info (Type_Info *t) { type_info = t; }
+private:
+	Type_Info *type_info;
 };
 
 class Empty_Ast: public Ast
 {
 public:
 	virtual void print_ast(int space_count, ostream & file_buffer, bool top_level) {}
+	virtual void gencode(ofstream &of) {}
 };
 
 class Expression_Ast: public Ast
@@ -90,12 +101,22 @@ public:
 	
 };
 
+class Output_Expr_Ast: public Unary_Expr_Ast
+{
+public:
+	Output_Expr_Ast (Ast *operand) { set_opd (operand); }
+	~Output_Expr_Ast() {}
+
+	void print_ast(int, ostream&, bool) {}
+	void gencode(ofstream&);
+};
+
 class Base_Expr_Ast: public Expression_Ast
 {
 public:
 
 	virtual void print_ast(int space_count, ostream & file_buffer, bool top_level) = 0;
-	
+	virtual void gencode(ofstream&);
 };
 
 
@@ -114,11 +135,11 @@ class Name_Expr_Ast: public Base_Expr_Ast
 
 	string expr_name;
 public:
-	Name_Expr_Ast(string & name);
+	Name_Expr_Ast(string & name, Type_Info *type_info);
 	~Name_Expr_Ast();
 
 	void print_ast(int space_count, ostream & file_buffer, bool top_level);
-
+	virtual void gencode(ofstream&);
 };
 
 template <class T>
@@ -131,6 +152,7 @@ public:
 	~Number_Expr_Ast();
 
 	void print_ast(int space_count, ostream & file_buffer, bool top_level);
+	virtual void gencode(ofstream&);
 
 };
 
@@ -142,7 +164,7 @@ public:
 class Plus_Expr_Ast: public Binary_Expr_Ast
 {
 public:
-	Plus_Expr_Ast(Ast * l, Ast * r);
+	Plus_Expr_Ast(Ast * l, Ast * r, Type_Info *);
 	~Plus_Expr_Ast() {}
 
 	void print_ast(int space_count, ostream & file_buffer, bool top_level);
@@ -152,7 +174,7 @@ public:
 class Minus_Expr_Ast: public Binary_Expr_Ast
 {
 public:
-	Minus_Expr_Ast(Ast * l, Ast * r);
+	Minus_Expr_Ast(Ast * l, Ast * r, Type_Info *);
 	~Minus_Expr_Ast() {}
 
 	void print_ast(int space_count, ostream & file_buffer, bool top_level);
@@ -162,7 +184,7 @@ public:
 class Div_Expr_Ast: public Binary_Expr_Ast
 {
 public:
-	Div_Expr_Ast(Ast * l, Ast * r);
+	Div_Expr_Ast(Ast * l, Ast * r, Type_Info *);
 	~Div_Expr_Ast() {}
 
 	void print_ast(int space_count, ostream & file_buffer, bool top_level);
@@ -172,7 +194,7 @@ public:
 class Mult_Expr_Ast: public Binary_Expr_Ast
 {
 public:
-	Mult_Expr_Ast(Ast * l, Ast * r);
+	Mult_Expr_Ast(Ast * l, Ast * r, Type_Info *);
 	~Mult_Expr_Ast() {}
 
 	void print_ast(int space_count, ostream & file_buffer, bool top_level);
@@ -186,7 +208,16 @@ public:
 	~UMinus_Expr_Ast() {}
 	
 	void print_ast(int space_count, ostream & file_buffer, bool top_level);
+	void gencode(ofstream&);
+};
 
+class MatMul_Expr_Ast: public Binary_Expr_Ast
+{
+public:
+	MatMul_Expr_Ast(Ast *l, Ast *r, Type_Info *);
+	~MatMul_Expr_Ast() {}
+
+	void print_ast(int, ostream&, bool);
 };
 
 //////////////////////////////////////// Statement Classes  ///////////////////////////////////////
@@ -221,7 +252,7 @@ public:
 	void set_rhs(Ast *r);
 
 	void print_ast(int space_count, ostream & file_buffer, bool top_level);
-
+	void gencode(ofstream&); // ofstream
 };
 
 #endif

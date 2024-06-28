@@ -1,5 +1,4 @@
 #ifndef COMMON_HEADERS_HH
-
 #define COMMON_HEADERS_HH
 
 # include <stdio.h>
@@ -11,8 +10,9 @@
 # include <unordered_map>
 # include <vector>
 # include <assert.h>
-#include <stdexcept>
+# include <stdexcept>
 # include "ast.hh"
+# include "type-info.hh"
 
 using namespace std;
 
@@ -37,31 +37,9 @@ typedef enum {
 	MULT,
 	DIV,
 	UMINUS,
+	MATMUL,
 	COPY,
 } op_type;
-
-typedef enum
-{
-	INT32,
-	INT8
-}var_type;
-
-class Type_Info
-                {
-                        var_type base_type;
-                        int dim_count = 0;
-                        int first_dim_size = 0;
-                        int second_dim_size = 0;
-
-                public:
-                        Type_Info (var_type bt);
-                        Type_Info (var_type bt, int nd, int fs, int ss);
-                        string base_type_name();
-                        var_type get_base_type();
-                        int get_number_of_dimensions();
-                        int get_size_of_first_dim();
-                        int get_size_of_second_dim();
-};
 
 extern struct argp_option options[]; 
 extern lpmode mode;
@@ -85,10 +63,16 @@ lpmode lp_mode();
 bool semantic_analysis();
 
 // For Symbol table:
-var_type get_base_type_from_string(string * name);
 void add_symbol_table_entry(string * name, Type_Info * t);
 bool found_in_symbol_table(string * name);
 void show_symbol_table();
 int get_int_from_string (string * name);
+void type_check_assign(string name, Ast * ast);
+Type_Info *type_check_binary (Ast *, Ast *, string);
+Type_Info *type_check_mult (Ast *, Ast *);
+Type_Info *type_check_matmul (Ast *, Ast *);
+
+void code_gen(list<Ast *> *);
+string mangle_name(string);
 
 #endif

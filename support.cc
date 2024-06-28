@@ -26,7 +26,8 @@ Ast * process_NUM(string * name)
 
 Ast * process_ID(string * name)
 {
-	Ast * ast = new Name_Expr_Ast(*name);
+	Type_Info *type_info = symtab.find(*name)->second;
+	Ast * ast = new Name_Expr_Ast(*name, type_info);
 	assert (ast != NULL);
 	return ast;	
 }
@@ -35,13 +36,23 @@ Ast * process_Expr(Ast *left, op_type op, Ast *right)
 {
 	int result;
 	Ast * ast;
+	Type_Info *type_info;
 
 	switch (op)
 	{
-		case PLUS:	ast = new Plus_Expr_Ast(left, right); break;
-		case MINUS:	ast = new Minus_Expr_Ast(left, right); break;
-		case MULT:	ast = new Mult_Expr_Ast(left, right); break;
-		case DIV:	ast = new Div_Expr_Ast(left, right); break;
+		case PLUS:	type_info = type_check_binary(left, right, "plus");
+				ast = new Plus_Expr_Ast(left, right, type_info); assert(ast); break;
+		case MINUS:	type_info = type_check_binary(left, right, "minus");
+				ast = new Minus_Expr_Ast(left, right, type_info); assert(ast); break;
+		case MULT:	type_info = type_check_mult(left, right); 
+				ast = new Mult_Expr_Ast(left, right, type_info); assert(ast); break;
+		case DIV:	type_info = type_check_binary(left, right, "div");
+				ast = new Div_Expr_Ast(left, right, type_info); assert(ast); break;
+                case MATMUL:
+			type_info = type_check_matmul(left, right);
+			ast = new MatMul_Expr_Ast(left, right, type_info);
+			assert (ast);
+			break;
 		case UMINUS:
 			if (right != NULL)
 			{
@@ -59,17 +70,13 @@ Ast * process_Expr(Ast *left, op_type op, Ast *right)
 
 Ast * process_Asgn(string *lhs_name, Ast *rhs)
 {
-	Ast *ast;
-	if (lhs_name == NULL)
-	{
-		ast = rhs;
-	}
-	else
-	{
-		Ast * l = new Name_Expr_Ast(*lhs_name);
-		Ast * r = rhs;
-		ast = new Assignment_Stmt_Ast(l, r);
-	}
+        assert (lhs_name);
+	string name = *lhs_name;
+	type_check_assign (name, rhs);
+	Ast * id = new Name_Expr_Ast(name, symtab.find(name)->second);
+	assert (id);
+	Ast *ast = new Assignment_Stmt_Ast(id, rhs);
+	assert (ast);
 	return ast;	
 }
 
@@ -128,15 +135,9 @@ int Type_Info::get_size_of_second_dim()
 {
 	return this->second_dim_size;
 }
-
-var_type get_base_type_from_string(string * name)
+bool Type_Info::is_tensor_type()
 {
-   if (*name == "int8") return INT8;
-   else if (*name == "int32") return INT32;
-   else {
-     cout<< "Error";
-     return INT8;
-   }
+	return this->dim_count > 0;
 }
 
 bool found_in_symbol_table(string * name)

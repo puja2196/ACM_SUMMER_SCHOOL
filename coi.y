@@ -11,24 +11,27 @@ void display_stmt_list (list<Ast *> *);
 	string * name;
 	Ast *ast;
 	list<Ast *> *ast_list;	
+        var_type base_type;
 }
 
 %token <name> NUM 
 %token <name> ID
 %token TK_INT8
 %token TK_INT32
-
+%token TK_MATMUL
+%token TK_OUTPUT
 %left '+' '-'
 %left '*' '/'
 %right Uminus
 %type <ast> Expr
 %type <ast> Stmt
 %type <ast_list> StmtList
-%type <name> Base_Type
+%type <base_type> Base_Type
 %start Start
 %%
 Start: StmtList 			{	if (show_parse()) cout << "Reducing by `Start: StmtList'\n";
 						if (show_ast ()) display_stmt_list ($1);
+						code_gen($1);
 					}
 	;
 StmtList : StmtList Stmt		{ 
@@ -51,6 +54,12 @@ Stmt : ID '=' Expr ';' 			{
 						$$ = new Empty_Ast();
                                                 if (show_symtab()) show_symbol_table();
 					}
+	| TK_OUTPUT Expr ';'		{
+						Ast *ast = new Output_Expr_Ast ($2);
+						assert (ast);
+						$$ = ast;
+					}
+        ;
 
 Expr : Expr '+' Expr			{ 
 						if (show_parse()) cout << "Reducing by `Expr : Expr + Expr'\n";
@@ -68,6 +77,10 @@ Expr : Expr '+' Expr			{
 						if (show_parse()) cout << "Reducing by `Expr : Expr - Expr'\n";
 						if (semantic_analysis()) $$ = process_Expr($1, MINUS, $3); 
 					}
+        | Expr TK_MATMUL Expr           {
+						if (show_parse()) cout << "Reducing by `Expr : Expr ** Expr'\n";
+                                                if (semantic_analysis()) $$ = process_Expr($1, MATMUL, $3);
+                                        }
 	| '-' Expr	%prec Uminus	{ 
 						if (show_parse()) cout << "Reducing by `Expr : - Expr'\n";
 						if (semantic_analysis()) $$ = process_Expr($2, UMINUS, NULL); 
@@ -81,7 +94,9 @@ Expr : Expr '+' Expr			{
                                                 if (!found_in_symbol_table($1)) {
                                                     cout << "\nError: symbol " << *($1) << " is not declared and not found in symbol table, can't be used\n";
                                                 }
-						else if (semantic_analysis()) $$ = process_ID($1); 
+						else if (semantic_analysis()) {
+							$$ = process_ID($1);
+						}
 					}
 	| '(' Expr ')'			{ 
 						if (show_parse()) cout << "Reducing by `Expr : ( Expr )'\n";
@@ -92,14 +107,14 @@ Expr : Expr '+' Expr			{
 Decl_Stmt: Scalar_Decl_Stmt | Tensor_Decl_Stmt
 
 Tensor_Decl_Stmt : ID '(' NUM ',' Base_Type ')' '[' NUM ']' ';'  {
-                                                                  var_type bt = get_base_type_from_string($5);
+                                                                  var_type bt = $5;
                                                                   int dim = get_int_from_string($3);
                                                                   int x = get_int_from_string($8);
                                                                   Type_Info * t = new Type_Info(bt, dim, x, 0);
                                                                   add_symbol_table_entry($1, t);
                                                                  }
                  | ID '(' NUM ',' Base_Type ')' '[' NUM ']' '[' NUM ']' ';'  {
-                                                                  var_type bt = get_base_type_from_string($5);
+                                                                  var_type bt = $5;
                                                                   int dim = get_int_from_string($3);
                                                                   int x = get_int_from_string($8);
                                                                   int y = get_int_from_string($11);
@@ -109,14 +124,14 @@ Tensor_Decl_Stmt : ID '(' NUM ',' Base_Type ')' '[' NUM ']' ';'  {
                  ;
 
 Scalar_Decl_Stmt: Base_Type ID ';' {
-                                   var_type bt = get_base_type_from_string($1);
+                                   var_type bt = $1;
 				   Type_Info * t = new Type_Info(bt);
                                    add_symbol_table_entry($2, t);
                                    }
                 ;
 
-Base_Type: TK_INT32
-	 | TK_INT8
+Base_Type: TK_INT32 { $$ = INT32; }
+	 | TK_INT8  { $$ = INT8; }
          ;
 	
 %%
